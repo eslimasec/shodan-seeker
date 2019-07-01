@@ -114,7 +114,7 @@ class ShodanSeeker:
                      self.log("List of IPs - ", list)
                      self.log ("Force status - ", str(force))
                      scan = self.api.scan(dictips, force)
-                     time.sleep(0.5)
+                     time.sleep(1)
                      id = scan["id"]
                      self.log("Scan ID: ", id)
  	             self.add_scanid(id)
@@ -129,7 +129,7 @@ class ShodanSeeker:
             self.log("newline")
             sys.exit(1)
 
-    def get_info(self, input, history, diff, output, toaddr, attach):
+    def get_info(self, input, history, fout, diff, output, toaddr, attach):
         self.log("Get info from IP/netblock - ", input)
         #self.log("History banners - ", history)
         #self.log("Diff - ", diff)
@@ -149,7 +149,11 @@ class ShodanSeeker:
         list = input.split(" ")
         #self.log("List Split - ", list)
         date = datetime.now()
-        filereportname = date.strftime("%Y-%m-%d-%H%M%S")
+        if (fout) is not None:
+            filereportname = fout
+        else:
+            filereportname = date.strftime("%Y-%m-%d-%H%M%S")
+        print (filereportname)
         for reportpath in paths:
             self.reportpath = paths['reportpath']
         if (history) is not None:
@@ -173,13 +177,13 @@ class ShodanSeeker:
                 for x in Network(item):
                     try:
                         host = self.api.host(str(x), history)
-                        time.sleep(0.5)
+                        time.sleep(1)
                         resaux = self.host_print(host, history, output, filereportpath, diff, toaddr)
                         res = str(res) + '\n' + str(resaux) #body mail
                     except APIError as e:
                         self.log("Error", e.value)
                         self.log("newline")
-                        time.sleep(0.5)
+                        time.sleep(1)
                         pass 
         if (output) is not None:
             self.log("Report: ", filereportpath)
@@ -197,7 +201,7 @@ class ShodanSeeker:
                     subject = subject + " All services"
             self.send_mail(subject, body, toaddr, attach, filereportpath) 
 
-    def get_infofromfile(self, file, history, diff, output, toaddr, attach):
+    def get_infofromfile(self, file, history, fout, diff, output, toaddr, attach):
         self.log("Get info from file - ", file)
         #self.log("History banners - ", history)
         #self.log("Diff - ", diff)
@@ -221,7 +225,11 @@ class ShodanSeeker:
                     list.append(line.replace('\n', ''))
                 self.log("List of IPs/netblock - ", list)
                 date = datetime.now()
-                filereportname = date.strftime("%Y-%m-%d-%H%M%S")
+                if (fout) is not None:
+                    filereportname = fout
+                else:
+                    filereportname = date.strftime("%Y-%m-%d-%H%M%S")
+
                 for reportpath in paths:
                     self.reportpath = paths['reportpath']
                 if (history) is not None:
@@ -233,9 +241,10 @@ class ShodanSeeker:
                     filereportpath = str(self.reportpath) + filereportname + ".csv"
                 for item in list:
                     if "/" not in item:
+                        self.log("[*] Checking: ", item)
                         try:
                             host = self.api.host(item, history)
-                            time.sleep(0.5)
+                            time.sleep(1)
                             resaux = self.host_print(host, history, output, filereportpath, diff, toaddr)
                             res = str(res) + '\n' + str(resaux) #body mail
                         except APIError as e:
@@ -244,15 +253,16 @@ class ShodanSeeker:
                              pass
                     else:
                         for x in Network(item):
+                            self.log("[*] Checking: ", x)
                             try:
                                 host = self.api.host(str(x), history)
-                                time.sleep(0.5)
+                                time.sleep(1)
                                 resaux = self.host_print(host, history, output, filereportpath, diff, toaddr)
                                 res = str(res) + '\n' + str(resaux) # body mail
                             except APIError as e:
                                 self.log("Error", e.value)
                                 self.log("newline")
-                                time.sleep(0.5)
+                                time.sleep(1)
                                 pass
                 if (output) is not None:
                     self.log("Report: ", filereportpath)
@@ -494,7 +504,7 @@ class ShodanSeeker:
             for ip in list:
                 namenew = name + '_' + str(i)
                 alert = self.api.create_alert(name, ip)
-                time.sleep(0.5)
+                time.sleep(1)
                 id = alert["id"]
                 self.log("Alert Name: ", namenew)
                 self.log("Alert ID: ", id)
@@ -519,7 +529,7 @@ class ShodanSeeker:
                      for ip in list:
                          namenew = name + '_' + str(i)
                          alert = self.api.create_alert(namenew, ip)
-                         time.sleep(0.5)
+                         time.sleep(1)
                          id = alert["id"]
                          self.log("Alert Name: ", namenew)
                          self.log("Alert ID: ", id)
@@ -564,11 +574,12 @@ class ShodanSeeker:
     def remove_allalerts(self):
         try:
             alerts = self.api.alerts()
-            time.sleep(0.5)
+            time.sleep(1)
             for alert in alerts:
+                #dcl
                 self.log("Removing alert: " + alert['name'] + " - " +  alert['id'])
                 self.api.delete_alert(alert['id'])
-                time.sleep(0.5)
+                time.sleep(1)
             self.log("All alerts have been removed")
         except APIError as e:
             self.log("Error", e.value)
@@ -591,7 +602,7 @@ class ShodanSeeker:
                     if str((banner['port'])) == str(m):
                         ip = str(get_ip(banner))
                         port = str((banner['port']))
-                        data = 'Hostname: ' + ip + ' Port: ' + port
+                        data = 'Hostname: ' + ip + ' Port: ' + port + '\nhttps://www.shodan.io/host/' + ip
                         self.log('Alert: ', data)
                         if (toaddr) is not None:
                             self.send_mail('[Alert] Risk port open', data, toaddr, None, None)
@@ -617,7 +628,7 @@ class ShodanSeeker:
                 #print "IP " + str(ip_stream)
                 #print "port_stream " + str(port_stream)
                 banner = self.api.host(ip_stream, True)
-                time.sleep(0.5)    
+                time.sleep(1)    
                 res = self.host_gethistdiff(banner, True, None, None, True, None, True)
                 res = res.split(' ')
                 #print "RES " + str(res)
@@ -703,6 +714,7 @@ EXAMPLES:
   ./shodanseeker -i 'X.X.X.X' --history                                      # Get all historical banners
   ./shodanseeker -i 'X.X.X.X' --diff                                         # Detect new services published 
   ./shodanseeker -f 'pathfilename' [--history|--diff] --output csv           # Output results in csv format
+  ./shodanseeker -f 'pathfilename' --output csv --fout myfile                # Output results in csv format inside myfile.csv
   ./shodanseeker -i 'X.X.X.X' --diff --output csv --mail toaddr -a           # Send email with csv results attached
   ./shodanseeker --ca Name 'X.X.X.X X.X.X.X/24'                              # Create network alerts for the IP/netblock 
   ./shodanseeker --cf Name 'pathfilename'                                    # Create network alerts from file
@@ -737,6 +749,7 @@ EXAMPLES:
         group2.add_option("--history", dest="history", help="Return all Historical Banners", action="store_true", default=None)
         group2.add_option("--diff", dest="diff", help="Detect New Services Published", action="store_true", default=None)
         group2.add_option("--output", dest="output", help="Output results in csv format", default=None)  
+        group2.add_option("--fout", dest="fout", help="Output file name, needs --output flag to work!!!", default=None)  
         parser.add_option_group(group2)
 
         group3 = optparse.OptionGroup(parser, "Monitoring in Real-Time")
@@ -800,13 +813,13 @@ EXAMPLES:
                             if (options.mail):
                                 if (options.mail) in mail:
  				    if (options.attach):
-				        shodangetinfo.get_info(options.getinfo, options.history, None, options.output, options.mail, options.attach)
+				        shodangetinfo.get_info(options.getinfo, options.history, options.fout, None, options.output, options.mail, options.attach)
      				    else:
-                                        shodangetinfo.get_info(options.getinfo, options.history, None, options.output, options.mail, None)
+                                        shodangetinfo.get_info(options.getinfo, options.history, options.fout,None, options.output, options.mail, None)
                                 else:
                                     print '[Error] Select a valid toaddress list from config file'
                             else:
-                                shodangetinfo.get_info(options.getinfo, options.history, None, options.output, None, None)
+                                shodangetinfo.get_info(options.getinfo, options.history, options.fout,None, options.output, None, None)
                         else:
                             print '[Error] Output format not supported' 
                     else:
@@ -814,9 +827,9 @@ EXAMPLES:
 			    if (options.attach):
                                 print '[Error] Select a file format output'
 			    else:
-                                shodangetinfo.get_info(options.getinfo, options.history, None, None, options.mail, None)
+                                shodangetinfo.get_info(options.getinfo, options.history,options.fout, None, None, options.mail, None)
                         else:
-                            shodangetinfo.get_info(options.getinfo, options.history, None, None, None, None) 
+                            shodangetinfo.get_info(options.getinfo, options.history,options.fout, None, None, None, None) 
                 else:
                     if (options.diff):
                         if (options.output):
@@ -824,13 +837,13 @@ EXAMPLES:
                                 if (options.mail):
                                     if (options.mail) in mail:
  				        if (options.attach):
-                                            shodangetinfo.get_info(options.getinfo, True, options.diff, options.output, options.mail, options.attach)
+                                            shodangetinfo.get_info(options.getinfo, True, options.fout,options.diff, options.output, options.mail, options.attach)
 			                else:
-                                            shodangetinfo.get_info(options.getinfo, True, options.diff, options.output, options.mail, None)
+                                            shodangetinfo.get_info(options.getinfo, True, options.fout,options.diff, options.output, options.mail, None)
                                     else:
                                         print '[Error] Select a valid toaddress list from config file'
                                 else:
-                                    shodangetinfo.get_info(options.getinfo, True, options.diff, options.output, None, None)
+                                    shodangetinfo.get_info(options.getinfo, True,options.fout, options.diff, options.output, None, None)
 			    else:
 		                print '[Error] Output format not supported'		
                         else:
@@ -839,24 +852,24 @@ EXAMPLES:
 	 			    if (options.attach):
 				        print '[Error] Select a file format output'
                                     else:
-					shodangetinfo.get_info(options.getinfo, True, options.diff, None, options.mail, None)
+					shodangetinfo.get_info(options.getinfo, True, options.fout,options.diff, None, options.mail, None)
                                 else:
                                     print '[Error] Select a valid toaddress list from config file'
                             else:
-                                shodangetinfo.get_info(options.getinfo, True, options.diff, None, None, None)
+                                shodangetinfo.get_info(options.getinfo, True, options.fout,options.diff, None, None, None)
                     else:
                         if (options.output):
                             if (options.output == 'csv'):
                                 if (options.mail):
                                     if (options.mail) in mail:
 				        if (options.attach):
-					    shodangetinfo.get_info(options.getinfo, None, None, options.output, options.mail, options.attach)
+					    shodangetinfo.get_info(options.getinfo, None,options.fout, None, options.output, options.mail, options.attach)
 			                else:
-				            shodangetinfo.get_info(options.getinfo, None, None, options.output, options.mail, None)
+				            shodangetinfo.get_info(options.getinfo, None, options.fout,None, options.output, options.mail, None)
                                     else:
                                         print '[Error] Select a valid toaddress list from config file'
                                 else:
-                                    shodangetinfo.get_info(options.getinfo, None, None, options.output, None, None)
+                                    shodangetinfo.get_info(options.getinfo, None, options.fout,None, options.output, None, None)
 			    else:
                                 print '[Error] Output format not supported'
                         else:
@@ -864,9 +877,9 @@ EXAMPLES:
 				if (options.attach):
 				    print '[Error] Select a file format output'
 				else:
-			            shodangetinfo.get_info(options.getinfo, None, None, None, options.mail, None)
+			            shodangetinfo.get_info(options.getinfo, None, options.fout,None, None, options.mail, None)
                             else:
-                                shodangetinfo.get_info(options.getinfo, None, None, None, None, None)
+                                shodangetinfo.get_info(options.getinfo, None,options.fout, None, None, None, None)
             else:
                 print '[Error] Input must not be null'
                 sys.exit(1)
@@ -883,13 +896,13 @@ EXAMPLES:
                                 if (options.mail):
                                     if (options.mail) in mail:
  				        if (options.attach):
-                                            shodangetinfofromfile.get_infofromfile(options.getinfofromfile, options.history, None, options.output, options.mail, options.attach)
+                                            shodangetinfofromfile.get_infofromfile(options.getinfofromfile, options.history,options.fout, None, options.output, options.mail, options.attach)
 			                else:
-					    shodangetinfofromfile.get_infofromfile(options.getinfofromfile, options.history, None, options.output, options.mail, None)
+					    shodangetinfofromfile.get_infofromfile(options.getinfofromfile, options.history, options.fout,None, options.output, options.mail, None)
                                     else:
                                         print '[Error] Select a valid toaddress list from config file'
                                 else:
-                                    shodangetinfofromfile.get_infofromfile(options.getinfofromfile, options.history, None, options.output, None, None)
+                                    shodangetinfofromfile.get_infofromfile(options.getinfofromfile, options.history, options.fout,None, options.output, None, None)
                             else:
                                 print '[Error] Output format not supported'
                         else:
@@ -897,9 +910,9 @@ EXAMPLES:
  				if (options.attach):
                                     print '[Error] Select a file format output'
 				else:
-				    shodangetinfofromfile.get_infofromfile(options.getinfofromfile, options.history, None, None, options.mail, None)	
+				    shodangetinfofromfile.get_infofromfile(options.getinfofromfile, options.history,options.fout, None, None, options.mail, None)	
                             else:
-                                shodangetinfofromfile.get_infofromfile(options.getinfofromfile, options.history, None, None, None, None)
+                                shodangetinfofromfile.get_infofromfile(options.getinfofromfile, options.history, options.fout,None, None, None, None)
                     else:
                         if (options.diff):
                             if (options.output):
@@ -907,13 +920,13 @@ EXAMPLES:
                                     if (options.mail):
                                         if (options.mail) in mail:
 					    if (options.attach):
-                                                shodangetinfofromfile.get_infofromfile(options.getinfofromfile, True, options.diff, options.output, options.mail, options.attach)
+                                                shodangetinfofromfile.get_infofromfile(options.getinfofromfile, True,options.fout, options.diff, options.output, options.mail, options.attach)
 					    else:
-			                        shodangetinfofromfile.get_infofromfile(options.getinfofromfile, True, options.diff, options.output, options.mail, None)
+			                        shodangetinfofromfile.get_infofromfile(options.getinfofromfile, True, options.fout,options.diff, options.output, options.mail, None)
                                         else:
                                             print '[Error] Select a valid toaddress list from config file'
                                     else:
-                                        shodangetinfofromfile.get_infofromfile(options.getinfofromfile, True, options.diff, options.output, None, None)
+                                        shodangetinfofromfile.get_infofromfile(options.getinfofromfile, True, options.fout,options.diff, options.output, None, None)
                                 else:
                                     print '[Error] Output format not supported'
                             else:
@@ -922,24 +935,24 @@ EXAMPLES:
 					if (options.attach):
 					    print '[Error] Select a file format output'
 					else:
-				            shodangetinfofromfile.get_infofromfile(options.getinfofromfile, True, options.diff, None, options.mail, None)
+				            shodangetinfofromfile.get_infofromfile(options.getinfofromfile, True, options.fout,options.diff, None, options.mail, None)
 			            else:
                                         print '[Error] Select a valid toaddress list from config file'
                                 else:
-                                    shodangetinfofromfile.get_infofromfile(options.getinfofromfile, True, options.diff, None, None, None)
+                                    shodangetinfofromfile.get_infofromfile(options.getinfofromfile, True, options.fout,options.diff, None, None, None)
                         else:
                             if (options.output):
                                 if (options.output == 'csv'):
                                     if (options.mail):
                                         if (options.mail) in mail:
 					    if (options.attach):
-                                                shodangetinfofromfile.get_infofromfile(options.getinfofromfile, None, None, options.output, options.mail, options.attach)
+                                                shodangetinfofromfile.get_infofromfile(options.getinfofromfile, None, options.fout,None, options.output, options.mail, options.attach)
 				            else:
-                                                shodangetinfofromfile.get_infofromfile(options.getinfofromfile, None, None, options.output, options.mail, None)
+                                                shodangetinfofromfile.get_infofromfile(options.getinfofromfile, None, None, options.fout,options.output, options.mail, None)
                                         else:
                                             print '[Error] Select a valid toaddress list from config file'
                                     else:
-                                        shodangetinfofromfile.get_infofromfile(options.getinfofromfile, None, None, options.output, None, None)
+                                        shodangetinfofromfile.get_infofromfile(options.getinfofromfile, None,options.fout, None, options.output, None, None)
                                 else:
                                     print '[Error] Output format not supported'    
                             else:
@@ -948,11 +961,11 @@ EXAMPLES:
 					if (options.attach):
 					    print '[Error] Select a file format output'
 				        else:
-				            shodangetinfofromfile.get_infofromfile(options.getinfofromfile, None, None, None, options.mail, None)
+				            shodangetinfofromfile.get_infofromfile(options.getinfofromfile, None, options.fout,None, None, options.mail, None)
 				    else:
                                         print '[Error] Select a valid toaddress list from config file'
                                 else:
-                                    shodangetinfofromfile.get_infofromfile(options.getinfofromfile, None, None, None, None, None)
+                                    shodangetinfofromfile.get_infofromfile(options.getinfofromfile, None, options.fout,None, None, None, None)
                 else:
                     print '[Error] File does not exist'
                     sys.exit(1)
